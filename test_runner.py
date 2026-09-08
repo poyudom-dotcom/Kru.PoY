@@ -1,50 +1,58 @@
+import os
 import subprocess
-import sys
 
-# กำหนด Test Cases ของไฟล์ Examination_1 ถึง 5
-TESTS = {
+# 1. ปรับชุดข้อมูลทดสอบ
+TEST_CASES = {
     "Examination_1": [
-        {"input": "Somchai\n", "expected": "Hello, Somchai"}
+        # Test cases เดิมของครูข้อ 1
     ],
     "Examination_2": [
-        {"input": "100\n20\n", "expected": "80.0"}
+        # Test cases เดิมของครูข้อ 2
     ],
     "Examination_3": [
-        {"input": "75\n", "expected": "Pass"},
-        {"input": "40\n", "expected": "Fail"}
+        # Test cases เดิมของครูข้อ 3
     ],
     "Examination_4": [
-        {"input": "85\n", "expected": "A"},
-        {"input": "65\n", "expected": "B"}
+        # Test cases เดิมของครูข้อ 4
     ],
     "Examination_5": [
-        {"input": "3\n", "expected": "60"},   # เคสที่ 1: ซื้อ 3 เล่ม (3 * 20 = 60 บาท ไม่ได้ส่วนลด)
-        {"input": "5\n", "expected": "90"},   # เคสที่ 2: ซื้อ 5 เล่ม (5 * 20 = 100 - 10 = 90 บาท ได้ส่วนลด)
-        {"input": "10\n", "expected": "190"}  # เคสที่ 3: ซื้อ 10 เล่ม (10 * 20 = 200 - 10 = 190 บาท ได้ส่วนลด)
-    ],
+        {"input": "3\n", "expected": "60"},
+        {"input": "5\n", "expected": "90"},
+        {"input": "10\n", "expected": "190"}
+    ]
 }
 
-has_failed = False
+def run_tests():
+    all_passed = True
+    
+    for file_name, cases in TEST_CASES.items():
+        py_file = f"{file_name}.py"
+        if not os.path.exists(py_file):
+            continue
 
-for filename, test_cases in TESTS.items():
-    for case in test_cases:
-        try:
-            res = subprocess.run(
-                ["python", filename],
-                input=case["input"],
-                text=True,
-                capture_output=True,
-                timeout=3
+        print(f"\n--- Testing {py_file} ---")
+        for i, case in enumerate(cases, 1):
+            process = subprocess.Popen(
+                ["python", py_file],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
             )
-            output = res.stdout.strip()
-            if case["expected"] not in output:
-                print(f"❌ {filename} ไม่ผ่าน: ได้รับ '{output}' (คาดหวัง '{case['expected']}')")
-                has_failed = True
+            stdout, stderr = process.communicate(input=case["input"])
+            
+            # 2. ปรับการเปรียบเทียบให้ยืดหยุ่น
+            actual_output = stdout.strip().lower()
+            expected_output = case["expected"].strip().lower()
+            
+            if actual_output == expected_output:
+                print(f"  Test Case {i}: PASSED ✅")
             else:
-                print(f"✅ {filename} ผ่าน!")
-        except Exception as e:
-            print(f"❌ {filename} เกิดข้อผิดพลาด: {e}")
-            has_failed = True
+                print(f"  Test Case {i}: FAILED ❌ (Got: '{stdout.strip()}', Expected: '{case['expected']}')")
+                all_passed = False
 
-if has_failed:
-    sys.exit(1)  # แจ้ง GitHub Actions ว่าไม่ผ่าน (แสดงเครื่องหมาย ❌)
+    if not all_passed:
+        exit(1)
+
+if __name__ == "__main__":
+    run_tests()

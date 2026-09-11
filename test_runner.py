@@ -3,46 +3,48 @@ import os
 import subprocess
 
 # ==============================================================================
-# ⚙️ ส่วนตั้งค่าโจทย์และ Test Cases (ข้อละ 4 Test Cases = ข้อละ 4 คะแนน)
-# รูปแบบ: "ชื่อไฟล์": [
-#     ([ข้อมูล Input บรรทัดที่ 1, บรรทัดที่ 2], "ผลลัพธ์ Output ที่ถูกต้อง"),
-# ]
+# ⚙️ ชุดทดสอบข้อสอบทั้ง 5 ข้อ (ข้อละ 4 Test Cases = ข้อละ 4 คะแนน)
 # ==============================================================================
 EXAM_TEST_CASES = {
+    # ข้อ 1: ทักทาย Hello, <name>
     "Examination_1": [
-        (["10", "5"], "25.0"),     # Test Case 1 (1 คะแนน)
-        (["3.5", "2.0"], "3.5"),    # Test Case 2 (1 คะแนน)
-        (["0", "5"], "0.0"),       # Test Case 3 (1 คะแนน)
-        (["100", "200"], "10000.0") # Test Case 4 (1 คะแนน)
+        (["Somchai"], "Hello, Somchai"),
+        (["Somsri"], "Hello, Somsri"),
+        (["John"], "Hello, John"),
+        (["PoY"], "Hello, PoY")
     ],
+    # ข้อ 2: ราคาสินค้าเน็ต (ราคา - ส่วนลด)
     "Examination_2": [
-        (["10", "5"], "50.0"),
-        (["3.5", "2.0"], "7.0"),
-        (["0", "5"], "0.0"),
-        (["10", "10"], "100.0")
+        (["100", "20"], "80.0"),
+        (["50.5", "10.5"], "40.0"),
+        (["250.75", "50.25"], "200.5"),
+        (["500", "0"], "500.0")
     ],
+    # ข้อ 3: ตรวจสอบผลการสอบ (>=50 Pass, <50 Fail)
     "Examination_3": [
-        (["80"], "A"),
-        (["70"], "B"),
-        (["60"], "C"),
-        (["49"], "F")
+        (["85"], "Pass"),
+        (["50"], "Pass"),
+        (["49"], "Fail"),
+        (["10"], "Fail")
     ],
+    # ข้อ 4: ตัดเกรดอย่างง่าย (>=80 A, 60-79 B, <60 C)
     "Examination_4": [
-        (["5"], "15"),
-        (["1"], "1"),
-        (["10"], "55"),
-        (["0"], "0")
+        (["90"], "A"),
+        (["80"], "A"),
+        (["75"], "B"),
+        (["55"], "C")
     ],
+    # ข้อ 5: สั่งซื้อสมุด (เล่มละ 20 บาท, >=5 เล่ม ลด 10 บาท)
     "Examination_5": [
-        (["2"], "Even"),
-        (["3"], "Odd"),
-        (["0"], "Even"),
-        (["-1"], "Odd")
+        (["1"], "20"),
+        (["4"], "80"),
+        (["5"], "90"),
+        (["10"], "190")
     ]
 }
 
 def find_file(base_name):
-    """ค้นหาไฟล์ว่ามีนามสกุล .py หรือไม่เพื่อป้องกันข้อผิดพลาดการตั้งชื่อ"""
+    """ค้นหาไฟล์รองรับทั้งชื่อที่มีและไม่มี .py"""
     if os.path.exists(f"{base_name}.py"):
         return f"{base_name}.py"
     elif os.path.exists(base_name):
@@ -50,7 +52,7 @@ def find_file(base_name):
     return None
 
 def run_test(file_path, inputs):
-    """รันไฟล์ Python พร้อมส่ง Input และดึงค่า Output"""
+    """รันไฟล์และดึงค่า Output"""
     try:
         input_data = "\n".join(inputs)
         process = subprocess.run(
@@ -66,6 +68,21 @@ def run_test(file_path, inputs):
     except Exception:
         return None
 
+def compare_outputs(actual, expected):
+    """เปรียบเทียบผลลัพธ์ รองรับทั้งตัวเลขทศนิยมและข้อความ"""
+    if actual is None:
+        return False
+    actual_clean = actual.strip()
+    expected_clean = expected.strip()
+    
+    if actual_clean == expected_clean:
+        return True
+    
+    try:
+        return abs(float(actual_clean) - float(expected_clean)) < 1e-5
+    except ValueError:
+        return False
+
 def main():
     total_score = 0
     max_total_score = 20
@@ -79,14 +96,13 @@ def main():
         if file_path:
             for inputs, expected in test_cases:
                 output = run_test(file_path, inputs)
-                if output is not None and output.strip() == expected.strip():
+                if compare_outputs(output, expected):
                     passed_cases += 1
         
-        # คำนวณคะแนนยืดหยุ่น (1 เคสผ่าน = 1 คะแนน)
+        # คะแนนยืดหยุ่นสะสมตามจำนวนเคสที่ผ่าน (ผ่าน 1 เคส = 1 คะแนน)
         score_for_exam = passed_cases 
         total_score += score_for_exam
         
-        # ไอคอนสถานะ
         if passed_cases == total_cases:
             status_icon = "✅ ผ่านครบ"
         elif passed_cases > 0:
@@ -98,7 +114,6 @@ def main():
             f"| `{exam_name}` | {status_icon} | {passed_cases}/{total_cases} เคส | **{score_for_exam} / 4** |"
         )
 
-    # สร้าง Markdown Summary แสดงในหน้า GitHub Actions Summary
     markdown_summary = f"""# 📊 สรุปผลการสอบวิชาเขียนโปรแกรม
 
 | ข้อสอบ | สถานะการตรวจ | ผ่าน Test Cases | คะแนนที่ได้ |
@@ -112,7 +127,6 @@ def main():
 
     print(markdown_summary)
 
-    # ส่งผลคะแนนเข้า $GITHUB_STEP_SUMMARY ของ GitHub Actions
     summary_file = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary_file:
         with open(summary_file, 'w', encoding='utf-8') as f:
